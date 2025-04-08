@@ -1,97 +1,115 @@
-import speech_recognition as sr
-
 from google import genai
+from dotenv import load_dotenv
+from pvrecorder import PvRecorder
+from collections import deque
 
-dev = True
+import os
+import pvporcupine
+import whisper
+import pvcobra
 
-def listen_and_store(chat, wake_word="computer"):
-    """
-    Listens for a wake word, then records and stores the following sentence.
+import numpy as np
 
-    Args:
-        chat: the gemini chat instance
-        wake_word: The word that triggers the recording.
-        output_file: The name of the file to store the sentences.
-    """
+class Assisstant:
+    def __init__(self, dev):
 
-    recognizer = sr.Recognizer()
+        # set to true for debugging purposes, false otherwise
+        self.dev_flag = dev
 
-    with sr.Microphone() as source:
-        print("Listening for wake word...")
-        recognizer.adjust_for_ambient_noise(source, duration=1)  # Adjust for noise
+        # used to detect wake word
+        self.porcupine = pvporcupine.create(
+        access_key=os.environ.get("ACCESS_KEY"),
+        keyword_paths=[os.environ.get("WAKE_WORD_MODEL_PATH")],
+        )
 
-        while True:
-            audio = recognizer.listen(source)
+        # used to detect speech activity
+        self.cobra = pvcobra.create(access_key=os.environ.get("ACCESS_KEY"),)
 
-            try:
-                text = recognizer.recognize_google(audio).lower() #lower case to make wake word easier to detect.
-
-                if wake_word in text:
-                    print("Wake word detected. Listening for sentence...")
-                    audio = recognizer.listen(source) #listen for next audio
-                    sentence = recognizer.recognize_google(audio)
-                    print("sentence recorded!")
-                    query_gemini(chat, sentence)
-                    
-
-            except sr.UnknownValueError:
-                pass
-            except sr.RequestError as e:
-                print(f"Could not request results; {e}")
-            except Exception as e:
-                print(f"An unexpected error occured: {e}")
+        # setup the local whisper model
+        self.model =  whisper.load_model(os.environ.get("WHISPER_MODEL"))
 
 
-# this returns just the text of the query
-def query_gemini(chat, sentence):    
-    response = chat.send_message(sentence).text
-    print(response)
-    save_important_info(chat, sentence)
+        '''
+        RECORDER SETUP
+        '''
+        # 1 sec = 16,000 / 512
+        self.frame_length = 512
+        self.sample_rate = 16000
+        
+        # voice activity sensitivity
+        self.vad_mean_probability_sensitivity = float(os.environ.get("VAD_SENSITIVITY"))
+        # setup audio input
+        self.recoder = PvRecorder(device_index=-1, frame_length=self.frame_length)
+        self.recorder.start()
+        max_window = 3
+        self.window_size = self.sample_rate * max_window
+        self.samples = deque(maxlen=window_size*6)
+        # why is this 25
+        self.vad_samples = deque(maxlen=25)
+        self.is_recording = False
 
-def save_important_info(chat, sentence):
-    important_info_prompt_file = open("prompts/important_info_prompt.txt", "r")
-    important_info_prompt = important_info_prompt_file.read()
-    important_info_prompt_file.close()
-    response = chat.send_message(important_info_prompt + sentence).text[0:-1]
-    print(response)
-    if response.lower() == "yes":
-        summarized_important_info_prompt_file = open("prompts/summarized_important_info_prompt.txt", "r")
-        summarized_important_info_prompt = summarized_important_info_prompt_file.read()
-        summarized_important_info_prompt_file.close()
+    def listen(self):
+        """Listens from the mic and calculates the probability that it heard speech
 
-        summarized_important_info = chat.send_message(summarized_important_info_prompt + sentence).text
-        important_info_file = open("saved_information.txt", "a")
-        important_info_file.write(summarized_important_info)
-        important_info_file.close()
-    elif dev:
-        print(chat.send_message("please explain why you said no.").text)
+        Args:
+            none
 
-def init_gemini_chat():
-    api_file = open("api_key.txt", "r")
-    api_key = api_file.read()
-    api_file.close()
+        Returns:
+            List[int]: the recorded sounds
+        """
+        data = self.recoder.read()
+        vad_probability = self.cobra.process(data)
+        self.vad_samples.append(vad_probability)
+        return data
 
-    client = genai.Client(api_key=api_key)
-    chat = client.chats.create(model='gemini-2.0-flash-001')
+    def transcribe_command(self):
+        """Listen to the audio of a command until speech stops, then transcribe it
+        Args:
+            none
+        Returns:
+            string: the transcribed text
+        """
+        while len(self.samples) < self.window_size or np.mean(self.vad_samples) >= self.vad_mean_probability_sensitivity:
+            data = self.listen()
+            self.samples.extend(data)
 
-    starting_prompt_file = open("prompts/starting_prompt.txt", "r")
-    starting_prompt = starting_prompt_file.read()
-    starting_prompt_file.close()
+        # process the speech it heard
+        transcriber_samples = np.array(self.samples, np.int16).flatten().astype(np.float32) / 32768.0
 
-    saved_info_file = open("saved_information.txt", "r")
-    saved_info = saved_info_file.read()
-    saved_info_file.close()
+        # TODO:work on multi language capabilities
+        # TODO: look into initial prompting
+        result = self.model.transcribe(audio=transcriber_samples, language='en', fp16=False)
+        return result.get("text")
 
-    chat.send_message(starting_prompt + saved_info)
 
-    return chat
+    def listen_for_wake_word(self):
+        """Continuous listening for a spoken wake word
+
+        Args:
+            none
+
+        Returns:
+            none 
+        """
+        try:
+            while True:
+                data = self.listen()
+                if self.porcupine.process(data) >= 0: # wake word detected
+                    self.samples.clear()
+                    self.transcribe_command()
+
+        except KeyboardInterrupt:
+            self.recorder.stop()
+        finally:
+            self.porcupine.delete()
+            self.recoder.delete()
+            self.cobra.delete()
 
 
 def main():
-    chat = init_gemini_chat()
-    # print(chat.send_message('what is the weather right now?').text)
-    listen_and_store(chat)
-
+    load_dotenv()
+    my_ai_assisstant = Assisstant(dev=True)
+    my_ai_assisstant.listen_for_wake_word()
 
 if __name__ == "__main__":
     main()
