@@ -7,23 +7,25 @@ import os
 import pvporcupine
 import whisper
 import pvcobra
+import logging
+import argparse
 
 import numpy as np
 
 class Assisstant:
-    def __init__(self, dev):
+    def __init__(self):
 
         # set to true for debugging purposes, false otherwise
-        self.dev_flag = dev
+        self.log = logging.getLogger("assisstant")
 
         # used to detect wake word
         self.porcupine = pvporcupine.create(
-        access_key=os.environ.get("ACCESS_KEY"),
+        access_key=os.environ.get("PORCUPINE_ACCESS_KEY"),
         keyword_paths=[os.environ.get("WAKE_WORD_MODEL_PATH")],
         )
 
         # used to detect speech activity
-        self.cobra = pvcobra.create(access_key=os.environ.get("ACCESS_KEY"),)
+        self.cobra = pvcobra.create(access_key=os.environ.get("PORCUPINE_ACCESS_KEY"),)
 
         # setup the local whisper model
         self.model =  whisper.load_model(os.environ.get("WHISPER_MODEL"))
@@ -39,11 +41,11 @@ class Assisstant:
         # voice activity sensitivity
         self.vad_mean_probability_sensitivity = float(os.environ.get("VAD_SENSITIVITY"))
         # setup audio input
-        self.recoder = PvRecorder(device_index=-1, frame_length=self.frame_length)
+        self.recorder = PvRecorder(device_index=-1, frame_length=self.frame_length)
         self.recorder.start()
         max_window = 3
         self.window_size = self.sample_rate * max_window
-        self.samples = deque(maxlen=window_size*6)
+        self.samples = deque(maxlen=self.window_size*6)
         # why is this 25
         self.vad_samples = deque(maxlen=25)
         self.is_recording = False
@@ -57,7 +59,7 @@ class Assisstant:
         Returns:
             List[int]: the recorded sounds
         """
-        data = self.recoder.read()
+        data = self.recorder.read()
         vad_probability = self.cobra.process(data)
         self.vad_samples.append(vad_probability)
         return data
@@ -79,6 +81,7 @@ class Assisstant:
         # TODO:work on multi language capabilities
         # TODO: look into initial prompting
         result = self.model.transcribe(audio=transcriber_samples, language='en', fp16=False)
+        self.log.debug("Command transcribed! You said: " + result.get("text"))
         return result.get("text")
 
 
@@ -91,10 +94,12 @@ class Assisstant:
         Returns:
             none 
         """
+        self.log.debug("Listening for wake word...")
         try:
             while True:
                 data = self.listen()
                 if self.porcupine.process(data) >= 0: # wake word detected
+                    self.log.debug("Wake word detected! Recording command...")
                     self.samples.clear()
                     self.transcribe_command()
 
@@ -102,13 +107,25 @@ class Assisstant:
             self.recorder.stop()
         finally:
             self.porcupine.delete()
-            self.recoder.delete()
+            self.recorder.delete()
             self.cobra.delete()
 
 
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d','--debug', help='Debug flag', action='store_true')
+    args = vars(parser.parse_args())
+    return args
+
 def main():
+    args = get_args()
     load_dotenv()
-    my_ai_assisstant = Assisstant(dev=True)
+
+    # setup logging
+    logging.getLogger("assisstant").setLevel(logging.DEBUG if args.get('debug') else logging.WARNING)
+    logging.basicConfig()
+
+    my_ai_assisstant = Assisstant()
     my_ai_assisstant.listen_for_wake_word()
 
 if __name__ == "__main__":
