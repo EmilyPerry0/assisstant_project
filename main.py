@@ -102,6 +102,7 @@ class Assisstant:
                     self.log.debug("Wake word detected! Recording command...")
                     self.samples.clear()
                     self.transcribe_command()
+                    self.log.debug("Listening for wake word again...")
 
         except KeyboardInterrupt:
             self.recorder.stop()
