@@ -20,12 +20,12 @@ class Assisstant:
 
         # used to detect wake word
         self.porcupine = pvporcupine.create(
-        access_key=os.environ.get("PORCUPINE_ACCESS_KEY"),
+        access_key=os.environ.get("PV_ACCESS_KEY"),
         keyword_paths=[os.environ.get("WAKE_WORD_MODEL_PATH")],
         )
 
         # used to detect speech activity
-        self.cobra = pvcobra.create(access_key=os.environ.get("PORCUPINE_ACCESS_KEY"),)
+        self.cobra = pvcobra.create(access_key=os.environ.get("PV_ACCESS_KEY"),)
 
         # setup the local whisper model
         self.model =  whisper.load_model(os.environ.get("WHISPER_MODEL"))
