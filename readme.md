@@ -17,5 +17,5 @@ set the `WHISPER_MODEL` variable in the `.env` file according to what model you 
 ```
 python3 main.py [-d]
 ```
-Options:\n
+Options:   
 [-d/--debug]: enables command line output useful for debugging
