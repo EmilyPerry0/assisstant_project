@@ -1,5 +1,3 @@
-from google import genai
-from dotenv import load_dotenv
 from pvrecorder import PvRecorder
 from collections import deque
 
@@ -8,14 +6,12 @@ import pvporcupine
 import whisper
 import pvcobra
 import logging
-import argparse
 
 import numpy as np
 
-class Assisstant:
+class Transcriber:
     def __init__(self):
 
-        # set to true for debugging purposes, false otherwise
         self.log = logging.getLogger("assisstant")
 
         # used to detect wake word
@@ -86,48 +82,24 @@ class Assisstant:
 
 
     def listen_for_wake_word(self):
-        """Continuous listening for a spoken wake word
+        """listen for a spoken wake word
 
         Args:
             none
 
         Returns:
-            none 
+            True if wake word was detected, False otherwise 
         """
-        self.log.debug("Listening for wake word...")
-        try:
-            while True:
-                data = self.listen()
-                if self.porcupine.process(data) >= 0: # wake word detected
-                    self.log.debug("Wake word detected! Recording command...")
-                    self.samples.clear()
-                    self.transcribe_command()
-                    self.log.debug("Listening for wake word again...")
+        data = self.listen()
+        if self.porcupine.process(data) >= 0: # wake word detected
+            self.log.debug("Wake word detected! Recording command...")
+            self.samples.clear()
+            return True
+        else:
+            return False
 
-        except KeyboardInterrupt:
-            self.recorder.stop()
-        finally:
-            self.porcupine.delete()
-            self.recorder.delete()
-            self.cobra.delete()
-
-
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-d','--debug', help='Debug flag', action='store_true')
-    args = vars(parser.parse_args())
-    return args
-
-def main():
-    args = get_args()
-    load_dotenv()
-
-    # setup logging
-    logging.getLogger("assisstant").setLevel(logging.DEBUG if args.get('debug') else logging.WARNING)
-    logging.basicConfig()
-
-    my_ai_assisstant = Assisstant()
-    my_ai_assisstant.listen_for_wake_word()
-
-if __name__ == "__main__":
-    main()
+    def shutdown_protocol(self):
+        self.recorder.stop()
+        self.porcupine.delete()
+        self.recorder.delete()
+        self.cobra.delete()

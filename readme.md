@@ -13,6 +13,9 @@ choose and train a wake word with [Picovoice](https://console.picovoice.ai/ppn).
 # select your whisper local model
 set the `WHISPER_MODEL` variable in the `.env` file according to what model you want to use. available options can be found [here](https://github.com/openai/whisper/blob/main/model-card.md). (ex: tiny.en)
 
+# Gemini
+get a gemini api key from [here](https://ai.google.dev/gemini-api/docs) and put that in the `.env` file
+
 # usage
 ```
 python3 main.py [-d]
