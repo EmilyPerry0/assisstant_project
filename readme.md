@@ -18,7 +18,7 @@ get a gemini api key from [here](https://ai.google.dev/gemini-api/docs) and put 
 
 # usage
 ```
-python3 main.py [-d]
+python3 src/main.py [-d]
 ```
 Options:   
 [-d/--debug]: enables command line output useful for debugging
