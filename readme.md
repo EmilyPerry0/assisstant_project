@@ -16,7 +16,6 @@ set the `WHISPER_MODEL` variable in the `.env` file according to what model you 
 # Gemini
 get a gemini api key from [here](https://ai.google.dev/gemini-api/docs) and put that in the `.env` file
 
-
 # usage
 ```
 python3 main.py [-d]
