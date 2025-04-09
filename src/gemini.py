@@ -38,7 +38,7 @@ class Gemini:
             summarized_important_info_prompt_file.close()
 
             summarized_important_info = self.chat.send_message(summarized_important_info_prompt + sentence).text
-            important_info_file = open("saved_information.txt", "a")
+            important_info_file = open("saved_information.txt", "w")
             important_info_file.write(summarized_important_info)
             important_info_file.close()
         elif response.lower() == "no":

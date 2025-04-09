@@ -178,3 +178,5 @@ cython_debug/
 
 # project specific
 models/
+
+saved_information.txt
