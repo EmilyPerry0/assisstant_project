@@ -29,8 +29,13 @@ class Assisstant:
                     wake_word_said = self.transcriber.listen_for_wake_word()
                 transcribed_command = self.transcriber.transcribe_command()
                 if 'weather' in transcribed_command:
-                    # TODO: Implement weather handling 
                     self.log.debug('will use weather handling seprately')
+                    weekly_weather = get_weekly_weather()['daily']
+                    daily_weather = weekly_weather[0]
+                    min_temp = daily_weather['temp']['min']
+                    max_temp = daily_weather['temp']['max']
+                    output_str = daily_weather['summary'] + " with a high of: " + str(max_temp) + " degrees and a low of: " + str(min_temp) + ' degrees.'
+                    print(output_str)
                 elif 'timer' in transcribed_command:
                     # TODO: Implement timer handling
                     self.log.debug('will use timer handling seprately')

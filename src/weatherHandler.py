@@ -5,9 +5,9 @@ import json
 import time
 import logging
 
-load_dotenv('.env')
+load_dotenv('../.env')
 
-API_KEY = os.getenv('API_KEY')
+API_KEY = os.getenv('WEATHER_API_KEY')
 BASE_URL = os.getenv('BASE_URL')
 CACHE_FILE = "../prompts/weather_cache.json"  # File to store cached data
 CACHE_EXPIRY = 3600  # Cache expires in 1 hour (3600 seconds)
@@ -25,6 +25,8 @@ def get_weekly_weather():
             if time.time() - cached_data["timestamp"] < CACHE_EXPIRY:
                 logger.debug("Using cached weather data.")
                 return cached_data["data"]
+    else:
+        logger.debug('weather_cache.json path not found')
     
     logger.debug("Fetching new weather data from API...")
     params = {
@@ -46,3 +48,4 @@ def get_weekly_weather():
     else:
         logger.debug("Error:", response.status_code, response.text)
         return None
+    
