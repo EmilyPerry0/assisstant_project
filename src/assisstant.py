@@ -42,6 +42,7 @@ class Assisstant:
                 transcribed_command = self.transcriber.transcribe_command()
                 # TODO Implement tokenizer (while preserving whitespace)
                 tokenized_command = self.tokenize(transcribed_command)
+                
                 if 'weather' in tokenized_command:
                     self.log.debug('will use weather handling seprately')
                     # Get a list of weather for the next week
@@ -62,14 +63,22 @@ class Assisstant:
                     # Put it into a string that can be used by TTS
                     output_str = daily_weather['summary'] + " with a high of: " + str(max_temp) + " degrees and a low of: " + str(min_temp) + ' degrees.'
                     print(output_str)
+                    
                 elif 'timer' in tokenized_command:
                     self.log.debug('will use timer handling seprately')
                     # Look for words related to setting a timer
                     if 'set' in tokenized_command or 'create' in tokenized_command or 'start' in tokenized_command:
                         self.log.debug('Here is where the timer is created')
-                        hours = ''
-                        mins = ''
-                        seconds = ''
+                        hours = 0
+                        mins = 0
+                        seconds = 0
+                        for index in range(len(tokenized_command)):
+                            if (tokenized_command[index] == 'hours' or tokenized_command[index] == 'hour') and index != 0:
+                                hours = tokenized_command[index-1]
+                            if (tokenized_command[index] == 'minutes' or tokenized_command[index] == 'minute') and index != 0:
+                                mins = tokenized_command[index-1]
+                            if (tokenized_command[index] == 'seconds' or tokenized_command[index] == 'second') and index != 0:
+                                seconds = tokenized_command[index-1]
                         timer_length = (seconds + 60*(mins + 60*hours))
                         Timer.start(length=timer_length)
                     # If they ask how long is left
@@ -80,9 +89,11 @@ class Assisstant:
                     else:
                         self.log.debug(f"Unknown timer command with entry: {transcribed_command}")
                         continue
+                    
                 elif 'alarm' in tokenized_command:
                     # TODO Implement alarm handling
                     self.log.debug('will handle alarms seprately as well')
+                    
                 else:
                     self.gen_ai_model.query_gemini(transcribed_command)
                     self.gen_ai_model.save_important_info(transcribed_command)
