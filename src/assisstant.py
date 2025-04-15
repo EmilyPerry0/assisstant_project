@@ -74,9 +74,11 @@ class Assisstant:
                     # Look for words related to setting a timer
                     if 'set' in tokenized_command or 'create' in tokenized_command or 'start' in tokenized_command:
                         self.log.debug('Here is where the timer is created')
+                        # Set some default vals
                         hours = 0
                         mins = 0
                         seconds = 0
+                        # Look for the specified time length
                         for index in range(len(tokenized_command)):
                             if (tokenized_command[index] == 'hours' or tokenized_command[index] == 'hour') and index != 0:
                                 hours = tokenized_command[index-1]
@@ -84,16 +86,20 @@ class Assisstant:
                                 mins = tokenized_command[index-1]
                             if (tokenized_command[index] == 'seconds' or tokenized_command[index] == 'second') and index != 0:
                                 seconds = tokenized_command[index-1]
+                        # Calculate the number of seconds
                         timer_length = (seconds + 60*(mins + 60*hours))
-                        timer = Timer()
-                        timer.start(length=timer_length)
-                        self.timer_dict[timer_length] = timer
+                        timer = Timer() # Create the timer object
+                        timer.start(length=timer_length) # Start the timer
+                        self.timer_dict[timer_length] = timer # Add it to a dictionary that tracks all of the timers by their set length
                     # If they ask how long is left
                     elif 'left' in tokenized_command:
+                        # If we have no timers say that
                         if len(self.timer_dict) == 0:
                             print("There are no timers")
+                        # If there is only one timer say the time left
                         elif len(self.timer_dict) == 1:
                             time_left = self.timer_dict[0].check() # Don't think this is valid syntax ATM
+                        # If there are multiple timers: uh-oh
                         else :
                             timer_str = ""
                             # Loop through all but the last key in the dictionary

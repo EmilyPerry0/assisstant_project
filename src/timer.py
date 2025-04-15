@@ -9,7 +9,8 @@ class Timer:
     def start(self, length):
         self.start_time = time.time()
         self.length = length()
-        threading.Timer(1, self.check()).start()
+        threading.Timer(1.0, self.check()).start()
+        self.log(f"Timer created for {self.length} seconds")
         
     def check(self):
         curr_time = time.time()
@@ -22,4 +23,5 @@ class Timer:
     def end(self):
         # Something happens here
         ## TODO Figure out how to have this method interrupt if necessary
+        ## TODO Also figure out how to remove the timer from the Assistant object 'self.timer_dict'
         pass
