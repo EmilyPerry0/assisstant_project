@@ -13,7 +13,7 @@ class Gemini:
         starting_prompt_file = open("prompts/starting_prompt.txt", "r")
         starting_prompt = starting_prompt_file.read()
         starting_prompt_file.close()
-        saved_info_file = open("saved_information.txt", "r")
+        saved_info_file = open("cached_information/saved_information.txt", "r")
         saved_info = saved_info_file.read()
         saved_info_file.close()
         self.chat.send_message(starting_prompt + saved_info)

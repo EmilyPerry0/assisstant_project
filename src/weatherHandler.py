@@ -9,7 +9,7 @@ load_dotenv('../.env')
 
 API_KEY = os.getenv('WEATHER_API_KEY')
 BASE_URL = os.getenv('BASE_URL')
-CACHE_FILE = "../prompts/weather_cache.json"  # File to store cached data
+CACHE_FILE = "cached_information/weather_cache.json"  # File to store cached data
 CACHE_EXPIRY = 3600  # Cache expires in 1 hour (3600 seconds)
 
 logger = logging.getLogger('weather')
