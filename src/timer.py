@@ -10,7 +10,7 @@ class Timer:
         self.start_time = time.time()
         self.length = length()
         threading.Timer(1.0, self.check()).start()
-        self.log(f"Timer created for {self.length} seconds")
+        self.log.debug(f"Timer created for {self.length} seconds")
         
     def check(self):
         curr_time = time.time()
