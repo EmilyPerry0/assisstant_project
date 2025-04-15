@@ -94,6 +94,15 @@ class Assisstant:
                 timer_str += " and " + list(self.timer_dict)[-1] + " seconds."
                 # List all of the timers and ask which one the user is referring to
                 print("You have timers of length: " + timer_str + " Which one would you like to ask about?")
+                answer = Transcriber.transcribe_command()
+                answer_tokens = self.tokenize(answer)
+                for item in answer_tokens:
+                    if item.isdigit():
+                        try:
+                            curr_timer = self.timer_dict[item]
+                            print(f"There are {curr_timer.check()} seconds left in your {item} second timer.")
+                        except KeyError:
+                            print(f"You said the timer for {item} seconds. Thiere is not a timer set for this length womp womp")
             self.log.debug("Here it will print how much time is left")
             
         # Handle any other entries
