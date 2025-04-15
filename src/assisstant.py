@@ -13,6 +13,9 @@ class Assisstant:
 
         # set up logger
         self.log = logging.getLogger("assisstant")
+        
+        # Create a dictionary to store timers
+        self.timer_dict = {}
 
     def tokenize(self, command):
         # Take in a command and make it lowercase
@@ -82,10 +85,24 @@ class Assisstant:
                             if (tokenized_command[index] == 'seconds' or tokenized_command[index] == 'second') and index != 0:
                                 seconds = tokenized_command[index-1]
                         timer_length = (seconds + 60*(mins + 60*hours))
-                        Timer.start(length=timer_length)
+                        timer = Timer()
+                        timer.start(length=timer_length)
+                        self.timer_dict[timer_length] = timer
                     # If they ask how long is left
                     elif 'left' in tokenized_command:
-                        # TODO Write something that will say how much time is left
+                        if len(self.timer_dict) == 0:
+                            print("There are no timers")
+                        elif len(self.timer_dict) == 1:
+                            time_left = self.timer_dict[0].check() # Don't think this is valid syntax ATM
+                        else :
+                            timer_str = ""
+                            # Loop through all but the last key in the dictionary
+                            for item in list(self.timer_dict)[:-1]:
+                                timer_str += item + " seconds, "
+                            # Specifically do something different for the last item
+                            timer_str += " and " + list(self.timer_dict)[-1] + " seconds."
+                            # List all of the timers and ask which one the user is referring to
+                            print("You have timers of length: " + timer_str + " Which one would you like to ask about?")
                         self.log.debug("Here it will print how much time is left")
                     # Handle any other entried
                     else:

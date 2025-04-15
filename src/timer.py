@@ -16,6 +16,8 @@ class Timer:
         if curr_time-self.start_time >= self.length:
             self.log.debug('Timer ended')
             self.end()
+        else:
+            return self.length-(curr_time-self.start_time)
     
     def end(self):
         # Something happens here
