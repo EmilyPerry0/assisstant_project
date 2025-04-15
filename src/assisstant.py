@@ -43,6 +43,7 @@ class Assisstant:
                 # TODO Implement tokenizer (while preserving whitespace)
                 tokenized_command = self.tokenize(transcribed_command)
                 
+                ## WEATHER HANDLING
                 if 'weather' in tokenized_command:
                     self.log.debug('will use weather handling seprately')
                     # Get a list of weather for the next week
@@ -64,6 +65,7 @@ class Assisstant:
                     output_str = daily_weather['summary'] + " with a high of: " + str(max_temp) + " degrees and a low of: " + str(min_temp) + ' degrees.'
                     print(output_str)
                     
+                ## TIMER HANDLING
                 elif 'timer' in tokenized_command:
                     self.log.debug('will use timer handling seprately')
                     # Look for words related to setting a timer
@@ -89,11 +91,13 @@ class Assisstant:
                     else:
                         self.log.debug(f"Unknown timer command with entry: {transcribed_command}")
                         continue
-                    
+                
+                ## ALARM HANDLING
                 elif 'alarm' in tokenized_command:
                     # TODO Implement alarm handling
                     self.log.debug('will handle alarms seprately as well')
-                    
+                
+                ## GEMINI HANDLING
                 else:
                     self.gen_ai_model.query_gemini(transcribed_command)
                     self.gen_ai_model.save_important_info(transcribed_command)
