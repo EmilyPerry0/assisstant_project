@@ -91,14 +91,16 @@ class Assisstant:
                         timer = Timer() # Create the timer object
                         timer.start(length=timer_length) # Start the timer
                         self.timer_dict[timer_length] = timer # Add it to a dictionary that tracks all of the timers by their set length
+                        
                     # If they ask how long is left
-                    elif 'left' in tokenized_command:
+                    elif 'left' in tokenized_command or 'remaining' in tokenized_command:
                         # If we have no timers say that
                         if len(self.timer_dict) == 0:
                             print("There are no timers")
                         # If there is only one timer say the time left
                         elif len(self.timer_dict) == 1:
-                            time_left = self.timer_dict[0].check() # Don't think this is valid syntax ATM
+                            time_left = self.timer_dict.values()[0].check() # Get the only value stored in the dict and check its time
+                            print(f"There are {time_left} seconds on your {self.timer_dict.keys()[0]} second timer.")
                         # If there are multiple timers: uh-oh
                         else :
                             timer_str = ""
@@ -110,7 +112,8 @@ class Assisstant:
                             # List all of the timers and ask which one the user is referring to
                             print("You have timers of length: " + timer_str + " Which one would you like to ask about?")
                         self.log.debug("Here it will print how much time is left")
-                    # Handle any other entried
+                        
+                    # Handle any other entries
                     else:
                         self.log.debug(f"Unknown timer command with entry: {transcribed_command}")
                         continue
