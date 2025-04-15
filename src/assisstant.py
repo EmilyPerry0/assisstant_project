@@ -1,6 +1,7 @@
 from transcriber import Transcriber
 from gemini import Gemini
 from weatherHandler import get_weekly_weather
+from timer import Timer
 
 import logging
 
@@ -28,6 +29,7 @@ class Assisstant:
                 while not wake_word_said:
                     wake_word_said = self.transcriber.listen_for_wake_word()
                 transcribed_command = self.transcriber.transcribe_command()
+                # TODO Implement tokenizer (while preserving whitespace)
                 if 'weather' in transcribed_command:
                     self.log.debug('will use weather handling seprately')
                     weekly_weather = get_weekly_weather()['daily']
@@ -37,7 +39,11 @@ class Assisstant:
                     output_str = daily_weather['summary'] + " with a high of: " + str(max_temp) + " degrees and a low of: " + str(min_temp) + ' degrees.'
                     print(output_str)
                 elif 'timer' in transcribed_command:
-                    # TODO: Implement timer handling
+                    hours = ''
+                    mins = ''
+                    seconds = ''
+                    timer_length = 1000*(seconds + 60*(mins + 60*hours))
+                    Timer.start(length=timer_length)
                     self.log.debug('will use timer handling seprately')
                 elif 'alarm' in transcribed_command:
                     # TODO Implement alarm handling
@@ -48,6 +54,7 @@ class Assisstant:
                 wake_word_said = False
 
         except KeyboardInterrupt:
+            self.log.debug("Keyboard interrupt recieved") # Less icky I hope <3
             pass # this feels like icky coding
         finally:
             self.transcriber.shutdown_protocol()
