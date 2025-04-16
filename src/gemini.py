@@ -5,7 +5,7 @@ import logging
 
 class Gemini:
     def __init__(self):
-        gemini_api_key = os.environ.get("GEMINI_API_KEY")
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
         client = genai.Client(api_key=gemini_api_key)
         self.chat = client.chats.create(model='gemini-2.0-flash-001')
 

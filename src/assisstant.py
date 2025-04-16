@@ -29,6 +29,48 @@ class Assisstant:
         command_list = command_stripped.split()
         return command_list
     
+    def words_to_int(self, s):
+        digits = ['0','1','2','3','4','5','6','7','8','9']
+        units = {
+            "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4,
+            "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+            "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13,
+            "fourteen": 14, "fifteen": 15, "sixteen": 16, "seventeen": 17,
+            "eighteen": 18, "nineteen": 19
+        }
+        tens = {
+            "twenty": 20, "thirty": 30, "forty": 40,
+            "fifty": 50, "sixty": 60, "seventy": 70,
+            "eighty": 80, "ninety": 90
+        }
+        multiples = {
+            "hundred": 100,
+            "thousand": 1000,
+            "million": 1000000,
+        }
+        # Normalize input
+        s = s.casefold().replace('-', ' ').replace(' and ', ' ')
+        tokens = s.split()
+
+        result = 0
+        current = 0
+
+        for token in tokens:
+            if token in digits:
+                int(token)
+            elif token in units:
+                current += units[token]
+            elif token in tens:
+                current += tens[token]
+            elif token in multiples:
+                current *= multiples[token]
+                result += current
+                current = 0
+            else:
+                raise ValueError(f"Unknown number word: {token}")
+        return result + current
+
+    
     def weather_handling(self, tokenized_command, transcribed_command):
         self.log.debug("weather handling running....")
         # Get a list of weather for the next week
@@ -49,18 +91,18 @@ class Assisstant:
         max_temp = daily_weather['temp']['max']
         # Put it into a string that can be used by TTS
         output_str = daily_weather['summary'] + " with a high of: " + str(max_temp) + " degrees and a low of: " + str(min_temp) + ' degrees.'
-        self.log.debug(output_str)
+        print(output_str)
     
 
     def timer_handling(self, tokenized_command, transcribed_command):
         self.log.debug('timer handling running...')
         # Look for words related to setting a timer
-        if 'set' in tokenized_command or 'create' in tokenized_command or 'start' in tokenized_command:
+        if 'set' in tokenized_command or 'create' in tokenized_command or 'start' in tokenized_command or 'add' in tokenized_command or 'make' in tokenized_command:
             self.log.debug('Here is where the timer is created')
             # Set some default vals
-            hours = 0
-            mins = 0
-            seconds = 0
+            hours = "0"
+            mins = "0"
+            seconds = "0"
             # Look for the specified time length
             for index in range(len(tokenized_command)):
                 if (tokenized_command[index] == 'hours' or tokenized_command[index] == 'hour') and index != 0:
@@ -70,7 +112,8 @@ class Assisstant:
                 if (tokenized_command[index] == 'seconds' or tokenized_command[index] == 'second') and index != 0:
                     seconds = tokenized_command[index-1]
             # Calculate the number of seconds
-            timer_length = (seconds + 60*(mins + 60*hours))
+            self.log.debug(f"Hours: {hours}, Mins: {mins}, Seconds: {seconds}")
+            timer_length = (self.words_to_int(seconds) + 60*(self.words_to_int(mins) + 60*self.words_to_int(hours)))
             timer = Timer()
             timer.start(length=timer_length)
             self.timer_dict[timer_length] = timer # Add it to a dictionary that tracks all of the timers by their set length
@@ -82,13 +125,13 @@ class Assisstant:
                 print("There are no timers")
             # If there is only one timer say the time left
             elif len(self.timer_dict) == 1:
-                time_left = self.timer_dict.values()[0].check() # Get the only value stored in the dict and check its time
-                print(f"There are {time_left} seconds on your {self.timer_dict.keys()[0]} second timer.")
+                time_left = list(self.timer_dict.values())[0].time_left() # Get the only value stored in the dict and check its time
+                print(f"There are {time_left} seconds on your {list(self.timer_dict.keys())[0]} second timer.")
             # If there are multiple timers: uh-oh
             else :
                 timer_str = ""
                 # Loop through all but the last key in the dictionary
-                for item in list(self.timer_dict)[:-1]:
+                for item in list(self.timer_dict.keys())[:-1]:
                     timer_str += item + " seconds, "
                 # Specifically do something different for the last item
                 timer_str += " and " + list(self.timer_dict)[-1] + " seconds."
@@ -100,9 +143,9 @@ class Assisstant:
                     if item.isdigit():
                         try:
                             curr_timer = self.timer_dict[item]
-                            print(f"There are {curr_timer.check()} seconds left in your {item} second timer.")
+                            print(f"There are {curr_timer.time_left()} seconds left in your {item} second timer.")
                         except KeyError:
-                            print(f"You said the timer for {item} seconds. Thiere is not a timer set for this length womp womp")
+                            print(f"You said the timer for {item} seconds. Thiere is not a timer set for this length womp womp. ")
             self.log.debug("Here it will print how much time is left")
             
         # Handle any other entries
@@ -131,7 +174,7 @@ class Assisstant:
                 
                 if 'weather' in tokenized_command:
                     self.weather_handling(tokenized_command, transcribed_command)
-                elif 'timer' in tokenized_command:
+                elif 'timer' in tokenized_command or 'timers' in tokenized_command:
                      self.timer_handling(tokenized_command, transcribed_command)
                 elif 'alarm' in tokenized_command:
                     # TODO Implement alarm handling
