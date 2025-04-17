@@ -134,38 +134,41 @@ class Assisstant:
                     self.log.debug(f"Unknown mode passed to handle_unknown_timers: {mode}")
             # If there they want to work with multiple timers >:(
             else:
-                flag = 0
-                timer_str2 = ""
-                for item in digi_list[:-1]:
-                    try:
-                        curr_timer = self.timer_dict[item]
-                    except KeyError:
-                        self.log.debug(f"You said the timer for {item} seconds. Thiere is not a timer set for this length womp womp.")
-                        flag += 1
-                    else:
-                        if mode == 'l':
-                            timer_str2 += f"You have {str(curr_timer.time_left())} seconds left on your {str(item)} second timer, "
-                        elif mode == 'r':
-                            timer_str2 += f""
-                        else:
-                            self.log.debug(f"Unkown mode: {mode}")
-                # Special handling for the very last item
-                try:
-                    curr_timer = self.timer_dict[digi_list[-1]]
-                except KeyError:
-                    self.log.debug(f"You said the timer for {digi_list[-1]} seconds. Thiere is not a timer set for this length womp womp.")
-                    flag += 1
+                self.handle_multiple_timers(mode=mode, digi_list=digi_list)
+                    
+    def handle_multiple_timers(self, mode, digi_list):
+        flag = 0
+        timer_str2 = ""
+        for item in digi_list[:-1]:
+            try:
+                curr_timer = self.timer_dict[item]
+            except KeyError:
+                self.log.debug(f"You said the timer for {item} seconds. Thiere is not a timer set for this length womp womp.")
+                flag += 1
+            else:
+                if mode == 'l':
+                    timer_str2 += f"You have {str(curr_timer.time_left())} seconds left on your {str(item)} second timer, "
+                elif mode == 'r':
+                    timer_str2 += f""
                 else:
-                    if mode == 'l':
-                        timer_str2 += f"and you have {str(curr_timer.time_left())} seconds left on your {str(item)} second timer."
-                    elif mode == 'r':
-                        timer_str2 += ""
-                    else:
-                        self.log.debug(f"Unknown mode {mode}")
-                if flag < len(digi_list):
-                    print(timer_str2)
-                else:
-                    print("None of the timers that you mentioned existed. What the literal fuck is wrong with you?")
+                    self.log.debug(f"Unkown mode: {mode}")
+        # Special handling for the very last item
+        try:
+            curr_timer = self.timer_dict[digi_list[-1]]
+        except KeyError:
+            self.log.debug(f"You said the timer for {digi_list[-1]} seconds. Thiere is not a timer set for this length womp womp.")
+            flag += 1
+        else:
+            if mode == 'l':
+                timer_str2 += f"and you have {str(curr_timer.time_left())} seconds left on your {str(item)} second timer."
+            elif mode == 'r':
+                timer_str2 += ""
+            else:
+                self.log.debug(f"Unknown mode {mode}")
+        if flag < len(digi_list):
+            print(timer_str2)
+        else:
+            print("None of the timers that you mentioned existed. What the literal fuck is wrong with you?")
                             
     def weather_handling(self, tokenized_command, transcribed_command):
         self.log.debug("weather handling running....")
@@ -215,35 +218,43 @@ class Assisstant:
             
         # If they ask how long is left
         elif 'left' in tokenized_command or 'remaining' in tokenized_command:
-            time_said = False
+            time_list = []
             for item in tokenized_command:
-                if self.words_to_int(item) != 0:
-                    time_said = True
-                    try:
-                        curr_timer = self.timer_dict[item]
-                        length = item
-                    except KeyError:
-                        self.log.debug(f"Timer of length {item} not found")
-                        time_said=False
-            if not time_said:
+                if self.words_to_int(item) != -1:
+                    time_list.append(self.words_to_int(item))
+            if len(time_list) == 0:
                 self.handle_unkown_timers(mode='l')
+            elif len(time_list) == 1:
+                    try:
+                        curr_timer = self.timer_dict[time_list[0]]
+                        length = time_list[0]
+                    except KeyError:
+                        self.log.debug(f"Timer of length {time_list[0]} not found")
+                    else:
+                        print(f"There are {curr_timer.time_left()} seconds left on your {length} second timer.")
             else:
-                print(f"There are {curr_timer.time_left()} seconds left on your {length} second timer.")
-            # If we have no timers say that
+                self.handle_multiple_timers(mode='l', digi_list=time_list)
 
             self.log.debug("Here it will print how much time is left")
         # Code to remove timers
         elif 'cancel' in tokenized_command or 'delete' in tokenized_command or 'remove' in tokenized_command or 'stop' in tokenized_command:
-            time_said = False
+            time_list = []
             for item in tokenized_command:
-                if self.words_to_int(item) != 0:
-                    time_said = True
-                    try:
-                        self.timer_dict[item]
-                    except KeyError:
-                        self.log.debug(f"Timer of length {item} not found")
-            if not time_said:
+                if self.words_to_int(item) != -1:
+                    time_list.append(self.words_to_int(item))
+            if len(time_list) == 0:
                 self.handle_unkown_timers(mode='r')
+            elif len(time_list) == 1:
+                    try:
+                        curr_timer = self.timer_dict[time_list[0]]
+                        length = time_list[0]
+                    except KeyError:
+                        self.log.debug(f"Timer of length {time_list[0]} not found")
+                    else:
+                        print(f"Deleting your {length} second timer.")
+                        ## TODO Figure out how to delete timers
+            else:
+                self.handle_multiple_timers(mode='r', digi_list=time_list)
             
         # Handle any other entries
         else:
