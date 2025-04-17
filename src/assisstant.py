@@ -72,7 +72,44 @@ class Assisstant:
                 raise ValueError(f"Unknown number word: {token}")
         return result + current
 
-    
+    def handle_unkown_timers(self, mode):
+        if len(self.timer_dict) == 0:
+            print("There are no timers")
+            # If there is only one timer say the time left
+        elif len(self.timer_dict) == 1:
+            time_left = list(self.timer_dict.values())[0].time_left() # Get the only value stored in the dict and check its time
+            print(f"There are {time_left} seconds on your {list(self.timer_dict.keys())[0]} second timer.")
+            # If there are multiple timers: uh-oh
+        else :
+            timer_str = ""
+            # Loop through all but the last key in the dictionary
+            for item in list(self.timer_dict.keys())[:-1]:
+                timer_str += item + " seconds, "
+            # Specifically do something different for the last item
+            timer_str += " and " + list(self.timer_dict)[-1] + " seconds."
+            # List all of the timers and ask which one the user is referring to
+            print("You have timers of length: " + timer_str + " Which timer are you like talking about?")
+            answer = Transcriber.transcribe_command()
+            answer_tokens = self.tokenize(answer)
+            digi_list = []
+            for item in answer_tokens:
+                if item.isdigit(): # This needs to get changed
+                    digi_list.append(item)
+            if len(digi_list) == 0:
+                print("Sorry, I didn't hear a number in that")
+                return
+            for item in digi_list:
+                try:
+                    curr_timer = self.timer_dict[item]
+                except KeyError:
+                    print(f"You said the timer for {item} seconds. Thiere is not a timer set for this length womp womp.")
+            if mode == 'l':        
+                print(f"There are {curr_timer.time_left()} seconds left in your {length} second timer.")
+            elif mode == 'r':
+                print(f"Sure! Canceled your {length} minute timer")
+            else:
+                self.log.debug(f"Unknown mode passed to handle_unknown_timers: {mode}")
+                        
     def weather_handling(self, tokenized_command, transcribed_command):
         self.log.debug("weather handling running....")
         # Get a list of weather for the next week
@@ -121,33 +158,31 @@ class Assisstant:
             
         # If they ask how long is left
         elif 'left' in tokenized_command or 'remaining' in tokenized_command:
+            time_said = False
+            for item in tokenized_command:
+                if self.words_to_int(item) != 0:
+                    time_said = True
+                    try:
+                        self.timer_dict[item]
+                    except KeyError:
+                        self.log.debug(f"Timer of length {item} not found")
+            if not time_said:
+                self.handle_unkown_timers(mode='l')
             # If we have no timers say that
-            if len(self.timer_dict) == 0:
-                print("There are no timers")
-            # If there is only one timer say the time left
-            elif len(self.timer_dict) == 1:
-                time_left = list(self.timer_dict.values())[0].time_left() # Get the only value stored in the dict and check its time
-                print(f"There are {time_left} seconds on your {list(self.timer_dict.keys())[0]} second timer.")
-            # If there are multiple timers: uh-oh
-            else :
-                timer_str = ""
-                # Loop through all but the last key in the dictionary
-                for item in list(self.timer_dict.keys())[:-1]:
-                    timer_str += item + " seconds, "
-                # Specifically do something different for the last item
-                timer_str += " and " + list(self.timer_dict)[-1] + " seconds."
-                # List all of the timers and ask which one the user is referring to
-                print("You have timers of length: " + timer_str + " Which one would you like to ask about?")
-                answer = Transcriber.transcribe_command()
-                answer_tokens = self.tokenize(answer)
-                for item in answer_tokens:
-                    if item.isdigit():
-                        try:
-                            curr_timer = self.timer_dict[item]
-                            print(f"There are {curr_timer.time_left()} seconds left in your {item} second timer.")
-                        except KeyError:
-                            print(f"You said the timer for {item} seconds. Thiere is not a timer set for this length womp womp. ")
+
             self.log.debug("Here it will print how much time is left")
+        # Code to remove timers
+        elif 'cancel' in tokenized_command or 'delete' in tokenized_command or 'remove' in tokenized_command or 'stop' in tokenized_command:
+            time_said = False
+            for item in tokenized_command:
+                if self.words_to_int(item) != 0:
+                    time_said = True
+                    try:
+                        self.timer_dict[item]
+                    except KeyError:
+                        self.log.debug(f"Timer of length {item} not found")
+            if not time_said:
+                self.handle_unkown_timers(mode='r')
             
         # Handle any other entries
         else:
@@ -169,7 +204,7 @@ class Assisstant:
                     try:
                         self.alarm_dict[item]
                     except ValueError:
-                        self.log.debug(f"Alarm of length {item} not found")
+                        self.log.debug(f"Alarm set for {item} not found")
         else:
             if len(self.alarm_dict) == 0:
                 print("You do not currently have any alarms. Would you like to set one?")
