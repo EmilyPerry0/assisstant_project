@@ -56,10 +56,11 @@ class Assisstant:
 
         result = 0
         current = 0
+        flag = 0
 
         for token in tokens:
             if token in digits:
-                int(token)
+                current += int(token)
             elif token in units:
                 current += units[token]
             elif token in tens:
@@ -69,17 +70,30 @@ class Assisstant:
                 result += current
                 current = 0
             else:
-                raise ValueError(f"Unknown number word: {token}")
-        return result + current
+                self.log.debug(f"Unknown work entered {s}")
+                flag += 1
+                
+        if flag == len(tokens):
+            return -1
+        else:
+            return result + current
 
     def handle_unkown_timers(self, mode):
+        # No timers = literally free
         if len(self.timer_dict) == 0:
             print("There are no timers")
-            # If there is only one timer say the time left
+        # If there is only one timer: easy peasy
         elif len(self.timer_dict) == 1:
-            time_left = list(self.timer_dict.values())[0].time_left() # Get the only value stored in the dict and check its time
-            print(f"There are {time_left} seconds on your {list(self.timer_dict.keys())[0]} second timer.")
-            # If there are multiple timers: uh-oh
+            if mode == 'l':
+                # Get the only value stored in the dict and check its time
+                time_left = list(self.timer_dict.values())[0].time_left()
+                print(f"There are {time_left} seconds on your {list(self.timer_dict.keys())[0]} second timer.")
+            elif mode =='r':
+                ## TODO Figure out how to delete timers
+                self.timer_dict
+            else:
+                self.log.debug(f"Unknown mode: {mode}")
+        # If there are multiple timers: uh-oh
         else :
             timer_str = ""
             # Loop through all but the last key in the dictionary
@@ -89,27 +103,70 @@ class Assisstant:
             timer_str += " and " + list(self.timer_dict)[-1] + " seconds."
             # List all of the timers and ask which one the user is referring to
             print("You have timers of length: " + timer_str + " Which timer are you like talking about?")
+            
+            # Get their answer and process it
             answer = Transcriber.transcribe_command()
             answer_tokens = self.tokenize(answer)
             digi_list = []
             for item in answer_tokens:
-                if item.isdigit(): # This needs to get changed
-                    digi_list.append(item)
+                if self.words_to_int(item) != -1: # This should work I think????
+                    digi_list.append(self.words_to_int(item)) # Collect all of the numbers that they may have said
+            # If they don't say a number we can just go back to normal waiting mode
             if len(digi_list) == 0:
                 print("Sorry, I didn't hear a number in that")
                 return
-            for item in digi_list:
-                try:
-                    curr_timer = self.timer_dict[item]
-                except KeyError:
-                    print(f"You said the timer for {item} seconds. Thiere is not a timer set for this length womp womp.")
-            if mode == 'l':        
-                print(f"There are {curr_timer.time_left()} seconds left in your {length} second timer.")
-            elif mode == 'r':
-                print(f"Sure! Canceled your {length} minute timer")
+            # If they only say one timer
+            elif len(digi_list) == 1:
+                for item in digi_list:
+                    try:
+                        curr_timer = self.timer_dict[item]
+                    except KeyError:
+                        print(f"You said the timer for {item} seconds. Thiere is not a timer set for this length womp womp.")
+                        return
+                    else:
+                        length = item
+                if mode == 'l':
+                    print(f"There are {curr_timer.time_left()} seconds left in your {length} second timer.")
+                elif mode == 'r':
+                    ## TODO Figure out how to cancel a timer
+                    print(f"Sure! Canceled your {length} minute timer")
+                else:
+                    self.log.debug(f"Unknown mode passed to handle_unknown_timers: {mode}")
+            # If there they want to work with multiple timers >:(
             else:
-                self.log.debug(f"Unknown mode passed to handle_unknown_timers: {mode}")
-                        
+                flag = 0
+                timer_str2 = ""
+                for item in digi_list[:-1]:
+                    try:
+                        curr_timer = self.timer_dict[item]
+                    except KeyError:
+                        self.log.debug(f"You said the timer for {item} seconds. Thiere is not a timer set for this length womp womp.")
+                        flag += 1
+                    else:
+                        if mode == 'l':
+                            timer_str2 += f"You have {str(curr_timer.time_left())} seconds left on your {str(item)} second timer, "
+                        elif mode == 'r':
+                            timer_str2 += f""
+                        else:
+                            self.log.debug(f"Unkown mode: {mode}")
+                # Special handling for the very last item
+                try:
+                    curr_timer = self.timer_dict[digi_list[-1]]
+                except KeyError:
+                    self.log.debug(f"You said the timer for {digi_list[-1]} seconds. Thiere is not a timer set for this length womp womp.")
+                    flag += 1
+                else:
+                    if mode == 'l':
+                        timer_str2 += f"and you have {str(curr_timer.time_left())} seconds left on your {str(item)} second timer."
+                    elif mode == 'r':
+                        timer_str2 += ""
+                    else:
+                        self.log.debug(f"Unknown mode {mode}")
+                if flag < len(digi_list):
+                    print(timer_str2)
+                else:
+                    print("None of the timers that you mentioned existed. What the literal fuck is wrong with you?")
+                            
     def weather_handling(self, tokenized_command, transcribed_command):
         self.log.debug("weather handling running....")
         # Get a list of weather for the next week
@@ -163,11 +220,15 @@ class Assisstant:
                 if self.words_to_int(item) != 0:
                     time_said = True
                     try:
-                        self.timer_dict[item]
+                        curr_timer = self.timer_dict[item]
+                        length = item
                     except KeyError:
                         self.log.debug(f"Timer of length {item} not found")
+                        time_said=False
             if not time_said:
                 self.handle_unkown_timers(mode='l')
+            else:
+                print(f"There are {curr_timer.time_left()} seconds left on your {length} second timer.")
             # If we have no timers say that
 
             self.log.debug("Here it will print how much time is left")
