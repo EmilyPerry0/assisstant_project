@@ -2,6 +2,7 @@ from transcriber import Transcriber
 from gemini import Gemini
 from weatherHandler import get_weekly_weather
 from timer import Timer
+from alarm import Alarm
 
 import string
 import logging
@@ -14,8 +15,9 @@ class Assisstant:
         # set up logger
         self.log = logging.getLogger("assisstant")
         
-        # Create a dictionary to store timers
+        # Create a dictionaries to store timers and alarms
         self.timer_dict = {}
+        self.alarm_dict = {}
 
         # setup for tokenization
         self.punctuation_removal_table = str.maketrans("", "", string.punctuation)
@@ -93,7 +95,6 @@ class Assisstant:
         output_str = daily_weather['summary'] + " with a high of: " + str(max_temp) + " degrees and a low of: " + str(min_temp) + ' degrees.'
         print(output_str)
     
-
     def timer_handling(self, tokenized_command, transcribed_command):
         self.log.debug('timer handling running...')
         # Look for words related to setting a timer
@@ -152,6 +153,35 @@ class Assisstant:
         else:
             self.log.debug(f"Unknown timer command with entry: {transcribed_command}")
 
+    def alarm_handling(self, tokenized_command, transcribed_commans):
+        self.log.debug("alarm handling running...")
+        if 'set' in tokenized_command or 'create' in tokenized_command or 'make' in tokenized_command:
+            mins = "0"
+            hour = "0"
+            day_offset = "0"
+            month_offset = "0"
+            year_offset = "0"
+            Alarm.calculate_time(mins,hour, day_offset, month_offset, year_offset)
+            pass
+        elif "cancel" in tokenized_command or 'delete' in tokenized_command or 'remove' in tokenized_command or 'stop' in tokenized_command:
+            for item in tokenized_command:
+                if item.isdatetime(): # Not correct syntax ATM
+                    try:
+                        self.alarm_dict[item]
+                    except ValueError:
+                        self.log.debug(f"Alarm of length {item} not found")
+        else:
+            if len(self.alarm_dict) == 0:
+                print("You do not currently have any alarms. Would you like to set one?")
+                return
+            elif len(self.alarm_dict) == 1:
+                print(f"You have one alarm set for {list(self.alarm_dict_dict.keys())[0]}")
+            else:
+                alarm_string = ""
+                for item in list(self.alarm_dict.keys())[:-1]:
+                    alarm_string += item + " "
+                alarm_string += " and " + list(self.alarm_dict.keys())[-1]
+                print("You have alarms set for " + alarm_string)
 
     def run(self):
         """Main Program flow: 
