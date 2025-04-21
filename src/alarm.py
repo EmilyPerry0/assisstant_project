@@ -18,8 +18,11 @@ class Alarm:
         self.log(f"Alarm set for {self.end_time} O'clock.")
         
     def calculate_time(self, mins, hours, day_offset, month_offset, year_offset):
-        time = datetime.now().time
-        print(time)
+        time = datetime.now().time().replace(microsecond=0, second=0)
+        day = datetime.now().day
+        print(day)
+        if time.hour < hours:
+            day_offset += 1
         return
         
     def check(self):
@@ -43,3 +46,5 @@ class Alarm:
         audioThread.start()
         self.stop_event.set()
         self.thread.join()
+
+Alarm.calculate_time(0,0,0,0,0,0)

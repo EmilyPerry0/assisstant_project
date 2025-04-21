@@ -215,7 +215,6 @@ class Assisstant:
             timer = Timer()
             timer.start(length=timer_length)
             self.timer_dict[timer_length] = timer # Add it to a dictionary that tracks all of the timers by their set length
-            
         # If they ask how long is left
         elif 'left' in tokenized_command or 'remaining' in tokenized_command:
             time_list = []
@@ -269,7 +268,7 @@ class Assisstant:
             month_offset = "0"
             year_offset = "0"
             Alarm.calculate_time(mins,hour, day_offset, month_offset, year_offset)
-            pass
+            
         elif "cancel" in tokenized_command or 'delete' in tokenized_command or 'remove' in tokenized_command or 'stop' in tokenized_command:
             for item in tokenized_command:
                 if item.isdatetime(): # Not correct syntax ATM
