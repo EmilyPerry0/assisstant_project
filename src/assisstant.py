@@ -32,6 +32,7 @@ class Assisstant:
         return command_list
     
     def words_to_int(self, s):
+        # could maybe move these declarations to class member variables, but probably no need
         digits = ['0','1','2','3','4','5','6','7','8','9']
         units = {
             "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4,
@@ -69,6 +70,8 @@ class Assisstant:
                 current *= multiples[token]
                 result += current
                 current = 0
+            elif token.isdigit(): # sometimes it just transcribes as a number (but in string datatype)
+                result += int(token)
             else:
                 self.log.debug(f"Unknown work entered {s}")
                 flag += 1
@@ -166,9 +169,13 @@ class Assisstant:
             else:
                 self.log.debug(f"Unknown mode {mode}")
         if flag < len(digi_list):
-            print(timer_str2)
+            print("test " + timer_str2)
         else:
             print("None of the timers that you mentioned existed. What the literal fuck is wrong with you?")
+    
+    def delete_timer(self, timer_length):
+        self.timer_dict.pop(timer_length)
+        self.log.debug(f"number of timers remaining: {len(self.timer_dict)}")
                             
     def weather_handling(self, tokenized_command, transcribed_command):
         self.log.debug("weather handling running....")
@@ -212,9 +219,10 @@ class Assisstant:
             # Calculate the number of seconds
             self.log.debug(f"Hours: {hours}, Mins: {mins}, Seconds: {seconds}")
             timer_length = (self.words_to_int(seconds) + 60*(self.words_to_int(mins) + 60*self.words_to_int(hours)))
-            timer = Timer()
+            timer = Timer(start_hours=hours, start_minutes=mins, start_seconds=seconds, assisstant=self)
             timer.start(length=timer_length)
             self.timer_dict[timer_length] = timer # Add it to a dictionary that tracks all of the timers by their set length
+            self.log.debug(f"there are now {len(self.timer_dict)} timers")
         # If they ask how long is left
         elif 'left' in tokenized_command or 'remaining' in tokenized_command:
             time_list = []

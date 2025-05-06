@@ -47,4 +47,5 @@ class Alarm:
         self.stop_event.set()
         self.thread.join()
 
-Alarm.calculate_time(0,0,0,0,0,0)
+# dunno what this does but it executes when the program boots up
+# Alarm.calculate_time(0,0,0,0,0,0)

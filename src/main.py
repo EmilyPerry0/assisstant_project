@@ -18,6 +18,7 @@ def main():
     # setup logging
     logging.getLogger("assisstant").setLevel(logging.DEBUG if args.get('debug') else logging.WARNING)
     logging.basicConfig()
+    logging.getLogger("assisstant").debug("logger created")
 
     # run the main program flow
     ai_assisstant = Assisstant()

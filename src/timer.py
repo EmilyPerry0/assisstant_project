@@ -5,9 +5,34 @@ from pydub import AudioSegment
 from pydub.playback import play
 
 class Timer:
-    def __init__(self):
+    def __init__(self, start_hours, start_minutes, start_seconds, assisstant):
         self.log = logging.getLogger("timer")
         self.stop_event = threading.Event()
+        self.assisstant = assisstant
+        self.start_hours = start_hours
+        self.start_minutes = start_minutes
+        self.start_seconds = start_seconds
+        
+        self.total_length_string = ""
+
+        # create the string to verbalize the inital timer length
+        if self.start_hours != "0":
+            if self.start_hours == "1":
+                self.total_length_string += "1 hour "
+            else :
+                self.total_length_string += self.start_hours + " hours "
+        
+        if self.start_minutes != "0":
+            if self.start_minutes == "1":
+                self.total_length_string += "1 minute "
+            else:
+                self.total_length_string += self.start_minutes + " minutes "
+        
+        if self.start_seconds != "0":
+            if self.start_seconds == "1":
+                self.total_length_string += "1 second"
+            else:
+                self.total_length_string += self.start_seconds + " seconds "
         
     def start(self, length):
         self.start_time = time.time()
@@ -32,15 +57,15 @@ class Timer:
         return int(self.length - (curr_time-self.start_time))
     
     def play_sound(self):
-        alarm_sound = AudioSegment.from_file("alarm.mp3")
+        alarm_sound = AudioSegment.from_file("assets/alarm.mp3")
         play(alarm_sound)
     
     def end(self):
         # Something happens here
         ## TODO Figure out how to have this method interrupt if necessary
-        ## TODO Also figure out how to remove the timer from the Assistant object 'self.timer_dict'
-        print("TIMER ENDED!!!!")
         audioThread = threading.Thread(target=self.play_sound)
         audioThread.start()
         self.stop_event.set()
-        self.thread.join()
+        audioThread.join()
+        print(f"Your {self.total_length_string}timer has ended")
+        self.assisstant.delete_timer(self.length)
