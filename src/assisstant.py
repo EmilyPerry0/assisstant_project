@@ -267,15 +267,13 @@ class Assisstant:
         else:
             self.log.debug(f"Unknown timer command with entry: {transcribed_command}")
 
-    def alarm_handling(self, tokenized_command, transcribed_commans):
+    def alarm_handling(self, tokenized_command, transcribed_command):
         self.log.debug("alarm handling running...")
         if 'set' in tokenized_command or 'create' in tokenized_command or 'make' in tokenized_command:
-            mins = "0"
-            hour = "0"
-            day_offset = "0"
-            month_offset = "0"
-            year_offset = "0"
-            Alarm.calculate_time(mins,hour, day_offset, month_offset, year_offset)
+            alarm_time = Alarm.calculate_time(tokenized_command)
+            alarm = Alarm()
+            alarm.start(alarm_time)
+            self.alarm_dict[alarm_time] = alarm
             
         elif "cancel" in tokenized_command or 'delete' in tokenized_command or 'remove' in tokenized_command or 'stop' in tokenized_command:
             for item in tokenized_command:
@@ -312,6 +310,7 @@ class Assisstant:
                 self.log.debug("Listening for wake word...")
                 while not wake_word_said:
                     wake_word_said = self.transcriber.listen_for_wake_word()
+                    Alarm.check_alarms(alarms_dict=self.alarm_dict, assisstant=self)
                 transcribed_command = self.transcriber.transcribe_command()
                 # TODO Implement tokenizer (while preserving whitespace)
                 tokenized_command = self.tokenize(transcribed_command)
@@ -322,7 +321,7 @@ class Assisstant:
                      self.timer_handling(tokenized_command, transcribed_command)
                 elif 'alarm' in tokenized_command:
                     # TODO Implement alarm handling
-                    self.log.debug('will handle alarms seprately as well')                   
+                    self.alarm_handling(tokenized_command, transcribed_command)                 
                 else: # GEMINI HANDLING
                     self.gen_ai_model.query_gemini(transcribed_command)
                     self.gen_ai_model.save_important_info(transcribed_command)
