@@ -1,6 +1,6 @@
 from transcriber import Transcriber
 from gemini import Gemini
-from weatherHandler import get_weekly_weather
+from weatherHandler import get_hourly_weather, get_daily_weather, get_weather_summary
 from timer import Timer
 from alarm import Alarm
 from classifier import detect_intent, detect_timer_sub_intent
@@ -188,18 +188,23 @@ class Assisstant:
     def weather_handling(self, tokenized_command, transcribed_command):
         self.log.debug("weather handling running....")
         # Get a list of weather for the next week
-        weekly_weather, today_hourly_data = get_weekly_weather()['daily']
+        daily_weather = get_daily_weather()
+        today_hourly_data = get_hourly_weather()['today_hourly']
+        summary = get_weather_summary()['']
         # If they mention tomorrow
         if 'tomorrow' in tokenized_command:
-            daily_weather = weekly_weather[1]
+            tomorrow_weather = daily_weather['timelines']['daily'][1]['values']
+            high = tomorrow_weather['temperatureMax'] + 2
+            low = tomorrow_weather['temperatureMin']
         # Otherwise assume they mean today
         else:
-            daily_weather = weekly_weather[0]
-        # Get the min and max temps
-        high = max(hour['temp'] for hour in today_hourly_data)
-        low = min(hour['temp'] for hour in today_hourly_data)
+            # Get the min and max temps
+            high = max(hour['values']['temperature'] for hour in today_hourly_data)
+            today_weather = daily_weather['timelines']['daily'][0]['values']
+            low = today_weather['temperatureMin']
+            
         # Put it into a string that can be used by TTS
-        output_str = daily_weather['summary'] + " with a high of: " + str(high) + " degrees and a low of: " + str(low) + ' degrees.'
+        output_str = summary + " with a high of: " + str(high) + " degrees and a low of: " + str(low) + ' degrees.'
         print(output_str)
     
     def timer_handling(self, tokenized_command, transcribed_command):
