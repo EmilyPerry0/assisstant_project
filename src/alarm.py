@@ -74,6 +74,3 @@ class Alarm:
         audioThread.start()
         self.stop_event.set()
         audioThread.join()
-
-# dunno what this does but it executes when the program boots up
-# Alarm.calculate_time(0,0,0,0,0,0)
