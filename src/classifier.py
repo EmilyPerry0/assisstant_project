@@ -13,6 +13,13 @@ TIMER_SUBINTENT_PATTERNS = {
     'delete': re.compile(r'\b(delete|cancel|remove|clear)\b', re.IGNORECASE),
 }
 
+
+ALARM_SUBINTENT_PATTERNS = {
+    'create': re.compile(r'\b(set|create|add|make|schedule|start)\b', re.IGNORECASE),
+    'delete': re.compile(r'\b(delete|remove|cancel|clear|stop)\b', re.IGNORECASE),
+    'list': re.compile(r'\b(list|show|view|see|what alarms|any alarms)\b', re.IGNORECASE),
+}
+
 def detect_intent(text: str) -> str:
     for intent, pattern in INTENT_PATTERNS.items():
         if pattern.search(text):
@@ -21,6 +28,12 @@ def detect_intent(text: str) -> str:
 
 def detect_timer_sub_intent(text: str) -> str:
     for action, pattern in TIMER_SUBINTENT_PATTERNS.items():
+        if pattern.search(text):
+            return action
+    return 'unknown'
+
+def detect_alarm_sub_intent(text: str) -> str:
+    for action, pattern in ALARM_SUBINTENT_PATTERNS.items():
         if pattern.search(text):
             return action
     return 'unknown'

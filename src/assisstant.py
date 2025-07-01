@@ -3,7 +3,7 @@ from gemini import Gemini
 from weatherHandler import get_hourly_weather, get_daily_weather, get_weather_summary
 from timer import Timer
 from alarm import Alarm
-from classifier import detect_intent, detect_timer_sub_intent
+from classifier import detect_intent, detect_timer_sub_intent, detect_alarm_sub_intent
 import re
 
 import string
@@ -190,19 +190,20 @@ class Assisstant:
         # Get a list of weather for the next week
         daily_weather = get_daily_weather()
         today_hourly_data = get_hourly_weather()['today_hourly']
-        summary = get_weather_summary()['']
+        summary = get_weather_summary()['daily']
         # If they mention tomorrow
         if 'tomorrow' in tokenized_command:
             tomorrow_weather = daily_weather['timelines']['daily'][1]['values']
             high = tomorrow_weather['temperatureMax'] + 2
             low = tomorrow_weather['temperatureMin']
+            summary = summary[1]['summary']
         # Otherwise assume they mean today
         else:
             # Get the min and max temps
             high = max(hour['values']['temperature'] for hour in today_hourly_data)
             today_weather = daily_weather['timelines']['daily'][0]['values']
             low = today_weather['temperatureMin']
-            
+            summary = summary[0]['summary']
         # Put it into a string that can be used by TTS
         output_str = summary + " with a high of: " + str(high) + " degrees and a low of: " + str(low) + ' degrees.'
         print(output_str)
@@ -256,6 +257,11 @@ class Assisstant:
         # Code to remove timers
         elif timer_sub_intent == 'delete':
             self.log.debug("timer canceler running... ")
+            
+            if 'all' in tokenized_command:
+                ## TODO: Figure out how to delete timers
+                return
+            
             time_list = []
             for item in tokenized_command:
                 if self.words_to_int(item) != -1:
@@ -295,20 +301,23 @@ class Assisstant:
 
     def alarm_handling(self, tokenized_command, transcribed_command):
         self.log.debug("alarm handling running...")
-        if 'set' in tokenized_command or 'create' in tokenized_command or 'make' in tokenized_command:
+        
+        alarm_sub_intent = detect_alarm_sub_intent(transcribed_command)
+        
+        if alarm_sub_intent == 'create':
             alarm_time = Alarm.calculate_time(tokenized_command)
             alarm = Alarm()
             alarm.start(alarm_time)
             self.alarm_dict[alarm_time] = alarm
             
-        elif "cancel" in tokenized_command or 'delete' in tokenized_command or 'remove' in tokenized_command or 'stop' in tokenized_command:
+        elif alarm_sub_intent == 'delete':
             for item in tokenized_command:
                 if item.isdatetime(): # Not correct syntax ATM
                     try:
                         self.alarm_dict[item]
                     except ValueError:
                         self.log.debug(f"Alarm set for {item} not found")
-        else:
+        elif alarm_sub_intent == 'list':
             if len(self.alarm_dict) == 0:
                 print("You do not currently have any alarms. Would you like to set one?")
                 return
@@ -320,6 +329,8 @@ class Assisstant:
                     alarm_string += item + " "
                 alarm_string += " and " + list(self.alarm_dict.keys())[-1]
                 print("You have alarms set for " + alarm_string)
+        else:
+            self.log.debug(f"Unknown alarm sub-intent with command: {transcribed_command}")
 
     def run(self):
         """Main Program flow: 
