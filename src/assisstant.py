@@ -3,6 +3,8 @@ from gemini import Gemini
 from weatherHandler import get_weekly_weather
 from timer import Timer
 from alarm import Alarm
+from classifier import detect_intent, detect_timer_sub_intent
+import re
 
 import string
 import logging
@@ -19,14 +21,14 @@ class Assisstant:
         self.timer_dict = {}
         self.alarm_dict = {}
 
-        # setup for tokenization
-        self.punctuation_removal_table = str.maketrans("", "", string.punctuation)
 
     def tokenize(self, command):
         # Take in a command and make it lowercase
         low_command = command.casefold()
         # Then remove punctuation
-        command_stripped = low_command.translate(self.punctuation_removal_table)
+        text = re.sub(r"[-–—‑]", " ", low_command)
+        command_stripped = re.sub(r"[^\w\s]", "", text)
+        self.log.debug(command_stripped)
         # Turn that into a list split on all whitespace
         command_list = command_stripped.split()
         return command_list
@@ -73,7 +75,7 @@ class Assisstant:
             elif token.isdigit(): # sometimes it just transcribes as a number (but in string datatype)
                 result += int(token)
             else:
-                self.log.debug(f"Unknown work entered {s}")
+                self.log.debug(f"{s} is not a number")
                 flag += 1
                 
         if flag == len(tokens):
@@ -101,19 +103,25 @@ class Assisstant:
             timer_str = ""
             # Loop through all but the last key in the dictionary
             for item in list(self.timer_dict.keys())[:-1]:
-                timer_str += item + " seconds, "
+                timer_str += str(item) + " seconds, "
             # Specifically do something different for the last item
-            timer_str += " and " + list(self.timer_dict)[-1] + " seconds."
+            timer_str += " and " + str(list(self.timer_dict)[-1]) + " seconds."
             # List all of the timers and ask which one the user is referring to
             print("You have timers of length: " + timer_str + " Which timer are you like talking about?")
             
             # Get their answer and process it
-            answer = Transcriber.transcribe_command()
+            self.second_transcriber = Transcriber()
+            answer = self.second_transcriber.transcribe_command()
+            while answer == None:
+                answer = self.second_transcriber.transcribe_command()
             answer_tokens = self.tokenize(answer)
+            if answer_tokens[-1] == 'one':
+                answer_tokens.pop()
             digi_list = []
             for item in answer_tokens:
                 if self.words_to_int(item) != -1: # This should work I think????
                     digi_list.append(self.words_to_int(item)) # Collect all of the numbers that they may have said
+            
             # If they don't say a number we can just go back to normal waiting mode
             if len(digi_list) == 0:
                 print("Sorry, I didn't hear a number in that")
@@ -180,29 +188,26 @@ class Assisstant:
     def weather_handling(self, tokenized_command, transcribed_command):
         self.log.debug("weather handling running....")
         # Get a list of weather for the next week
-        weekly_weather = get_weekly_weather()['daily']
-        # If they mention today get the appropriate day
-        if 'today' in tokenized_command:
-            daily_weather = weekly_weather[0]
-        # If they mention tomorrow do the same
-        elif 'tomorrow' in tokenized_command:
+        weekly_weather, today_hourly_data = get_weekly_weather()['daily']
+        # If they mention tomorrow
+        if 'tomorrow' in tokenized_command:
             daily_weather = weekly_weather[1]
-        # Handle any other entries
+        # Otherwise assume they mean today
         else:
-            self.log.debug(f"Unknown weather command with entry: {transcribed_command}")
-            self.log.debug(f"tokenized command: {tokenized_command}")
-            return
+            daily_weather = weekly_weather[0]
         # Get the min and max temps
-        min_temp = daily_weather['temp']['min']
-        max_temp = daily_weather['temp']['max']
+        high = max(hour['temp'] for hour in today_hourly_data)
+        low = min(hour['temp'] for hour in today_hourly_data)
         # Put it into a string that can be used by TTS
-        output_str = daily_weather['summary'] + " with a high of: " + str(max_temp) + " degrees and a low of: " + str(min_temp) + ' degrees.'
+        output_str = daily_weather['summary'] + " with a high of: " + str(high) + " degrees and a low of: " + str(low) + ' degrees.'
         print(output_str)
     
     def timer_handling(self, tokenized_command, transcribed_command):
         self.log.debug('timer handling running...')
         # Look for words related to setting a timer
-        if 'set' in tokenized_command or 'create' in tokenized_command or 'start' in tokenized_command or 'add' in tokenized_command or 'make' in tokenized_command:
+        timer_sub_intent = detect_timer_sub_intent(transcribed_command)
+        
+        if timer_sub_intent == 'create':
             self.log.debug('Here is where the timer is created')
             # Set some default vals
             hours = "0"
@@ -224,7 +229,7 @@ class Assisstant:
             self.timer_dict[timer_length] = timer # Add it to a dictionary that tracks all of the timers by their set length
             self.log.debug(f"there are now {len(self.timer_dict)} timers")
         # If they ask how long is left
-        elif 'left' in tokenized_command or 'remaining' in tokenized_command:
+        elif timer_sub_intent == 'check':
             time_list = []
             for item in tokenized_command:
                 if self.words_to_int(item) != -1:
@@ -244,7 +249,8 @@ class Assisstant:
 
             self.log.debug("Here it will print how much time is left")
         # Code to remove timers
-        elif 'cancel' in tokenized_command or 'delete' in tokenized_command or 'remove' in tokenized_command or 'stop' in tokenized_command:
+        elif timer_sub_intent == 'delete':
+            self.log.debug("timer canceler running... ")
             time_list = []
             for item in tokenized_command:
                 if self.words_to_int(item) != -1:
@@ -262,6 +268,21 @@ class Assisstant:
                         ## TODO Figure out how to delete timers
             else:
                 self.handle_multiple_timers(mode='r', digi_list=time_list)
+                
+        elif timer_sub_intent == 'list':
+            self.log.debug('running timer lister... ')
+            num_timers = len(self.timer_dict)
+            print(f"You have {num_timers} timers")
+            if num_timers == 1:
+                print(f'You have a timer for {list(self.timer_dict.keys())[0]} seconds,')
+            elif num_timers == 2:
+                print(f'You have a timer for {list(self.timer_dict.keys())[0]} seconds,')
+                print(f"and, a timer for {list(self.timer_dict.keys())[-1]} seconds")
+            elif num_timers > 2:
+                print(f'You have a timer for {list(self.timer_dict.keys())[0]} seconds,')
+                for i in list(self.timer_dict.keys()[1:-1]):
+                    print(f"a timer for {i} seconds, ")
+                print(f"and, a timer for {list(self.timer_dict.keys())[-1]} seconds")
             
         # Handle any other entries
         else:
@@ -312,19 +333,24 @@ class Assisstant:
                     wake_word_said = self.transcriber.listen_for_wake_word()
                     Alarm.check_alarms(alarms_dict=self.alarm_dict, assisstant=self)
                 transcribed_command = self.transcriber.transcribe_command()
+                while transcribed_command == None:
+                    transcribed_command = self.transcriber.transcribe_command()
                 # TODO Implement tokenizer (while preserving whitespace)
                 tokenized_command = self.tokenize(transcribed_command)
                 
-                if 'weather' in tokenized_command:
+                
+                intent = detect_intent(transcribed_command)
+
+                if intent == 'weather':
                     self.weather_handling(tokenized_command, transcribed_command)
-                elif 'timer' in tokenized_command or 'timers' in tokenized_command:
-                     self.timer_handling(tokenized_command, transcribed_command)
-                elif 'alarm' in tokenized_command:
-                    # TODO Implement alarm handling
-                    self.alarm_handling(tokenized_command, transcribed_command)                 
-                else: # GEMINI HANDLING
+                elif intent == 'timer':
+                    self.timer_handling(tokenized_command, transcribed_command)
+                elif intent == 'alarm':
+                    self.alarm_handling(tokenized_command, transcribed_command)
+                else:
                     self.gen_ai_model.query_gemini(transcribed_command)
                     self.gen_ai_model.save_important_info(transcribed_command)
+
                 wake_word_said = False
 
         except KeyboardInterrupt:

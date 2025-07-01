@@ -4,8 +4,9 @@ import requests
 import json
 import time
 import logging
+from datetime import datetime, timedelta, timezone
 
-load_dotenv('../.env')
+load_dotenv('.env')
 
 API_KEY = os.getenv('WEATHER_API_KEY')
 BASE_URL = os.getenv('BASE_URL')
@@ -32,15 +33,33 @@ def get_weekly_weather():
     params = {
         "lat": lat,
         "lon": lon,
-        "exclude": "minutely,hourly",
+        "exclude": "minutely",
         "units": "metric",
         "appid": API_KEY
     }
 
     response = requests.get(BASE_URL, params=params)
     
+    from datetime import datetime, timedelta
+
+    # Assume `data` is your API response JSON
+    timezone_offset = response["timezone_offset"]
+    hourly_data = response["hourly"]
+
+    # Get the local date for now
+    now_local = datetime.now(timezone.utc) + timedelta(seconds=timezone_offset)
+    today = now_local.date()
+
+    # Collect hourly temps for today only
+    today_hourly_data = [
+        h for h in hourly_data
+        if (datetime.fromtimestamp(h['dt'], tz=timezone.utc) + timedelta(seconds=timezone_offset)).date() == today
+    ]
+
+    
     if response.status_code == 200:
         data = response.json()
+        data['today_hourly_data'] = today_hourly_data
         # Cache the response with a timestamp
         with open(CACHE_FILE, "w") as f:
             json.dump({"timestamp": time.time(), "data": data}, f)
@@ -49,3 +68,4 @@ def get_weekly_weather():
         logger.debug("Error:", response.status_code, response.text)
         return None
     
+print(get_weekly_weather()['today_hourly_data'])
