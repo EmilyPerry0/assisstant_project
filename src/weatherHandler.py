@@ -138,5 +138,3 @@ def get_weather_summary():
     else:
         logger.debug("Error:", response.status_code, response.text)
         return None
-
-print(get_weather_summary())

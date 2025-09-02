@@ -11,6 +11,7 @@ class Alarm:
         self.log = logging.getLogger("alarm")
         self.stop_event = threading.Event()
         
+        
     def start(self, time):
         self.end_time = time
         self.thread = threading.Thread(target=self.check)

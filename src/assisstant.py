@@ -95,7 +95,7 @@ class Assisstant:
                 print(f"There are {time_left} seconds on your {list(self.timer_dict.keys())[0]} second timer.")
             elif mode =='r':
                 ## TODO Figure out how to delete timers
-                self.timer_dict
+                self.delete_timer(list(self.timer_dict.keys())[0]) # This might work too? I hope
             else:
                 self.log.debug(f"Unknown mode: {mode}")
         # If there are multiple timers: uh-oh
@@ -132,14 +132,15 @@ class Assisstant:
                     try:
                         curr_timer = self.timer_dict[item]
                     except KeyError:
-                        print(f"You said the timer for {item} seconds. Thiere is not a timer set for this length womp womp.")
+                        print(f"You said the timer for {item} seconds. There is not a timer set for this length womp womp.")
                         return
                     else:
                         length = item
                 if mode == 'l':
                     print(f"There are {curr_timer.time_left()} seconds left in your {length} second timer.")
                 elif mode == 'r':
-                    ## TODO Figure out how to cancel a timer
+                    for item in digi_list:
+                        self.delete_timer(item) # I hope this works
                     print(f"Sure! Canceled your {length} minute timer")
                 else:
                     self.log.debug(f"Unknown mode passed to handle_unknown_timers: {mode}")
@@ -181,6 +182,7 @@ class Assisstant:
         else:
             print("None of the timers that you mentioned existed. What the literal fuck is wrong with you?")
     
+    ## TODO Make sure this method actually works. Does simply poping the reference actually stop the timer?
     def delete_timer(self, timer_length):
         self.timer_dict.pop(timer_length)
         self.log.debug(f"number of timers remaining: {len(self.timer_dict)}")
@@ -260,6 +262,8 @@ class Assisstant:
             
             if 'all' in tokenized_command:
                 ## TODO: Figure out how to delete timers
+                for item in list(self.timer_dict.values()):
+                    self.delete_timer(item)
                 return
             
             time_list = []
@@ -277,6 +281,7 @@ class Assisstant:
                     else:
                         print(f"Deleting your {length} second timer.")
                         ## TODO Figure out how to delete timers
+                        self.delete_timer(time_list[0])
             else:
                 self.handle_multiple_timers(mode='r', digi_list=time_list)
                 
